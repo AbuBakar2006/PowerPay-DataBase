@@ -351,6 +351,118 @@ CREATE    TABLE CHARGES (
           );
 
 INSERT    INTO CHARGES (UtilityType, RatePerUnit, FixedCharge, TaxPercentage, ServiceFee)
-VALUES    ('Electricity', 7.5, 120, 10, 25),
+VALUES    ('Electricity', 17.5, 120, 10, 25),
           ('Water', 5.5, 100, 5, 15),
           ('Gas', 6.5, 110, 8, 18);
+
+-- ================================================================
+-- Data Retrieval Queries
+-- ================================================================
+
+-- JOIN Query: Retrieve Customer Name, Account ID, and Meter Type for all meters
+SELECT 
+    C.FirstName, 
+    C.LastName, 
+    A.AccountID, 
+    M.MeterType
+FROM 
+    CUSTOMER C
+JOIN 
+    ACCOUNT A ON C.CustomerID = A.CustomerID
+JOIN 
+    METER M ON A.AccountID = M.AccountID;
+
+-- Aggregate & GROUP BY: Calculate Total Billed Amount per Customer
+SELECT 
+    C.CustomerID,
+    C.FirstName,
+    SUM(B.TotalAmount) AS TotalBilled
+FROM 
+    CUSTOMER C
+JOIN 
+    ACCOUNT A ON C.CustomerID = A.CustomerID
+JOIN 
+    BILL B ON A.AccountID = B.AccountID
+GROUP BY 
+    C.CustomerID, C.FirstName
+ORDER BY 
+    TotalBilled DESC;
+
+-- HAVING Clause: Find Customers who have consumed more than 50 units on average
+SELECT 
+    C.CustomerID,
+    C.FirstName,
+    AVG(B.UnitsConsumed) AS AvgConsumption
+FROM 
+    CUSTOMER C
+JOIN 
+    ACCOUNT A ON C.CustomerID = A.CustomerID
+JOIN 
+    BILL B ON A.AccountID = B.AccountID
+GROUP BY 
+    C.CustomerID, C.FirstName
+HAVING 
+    AVG(B.UnitsConsumed) > 50;
+
+-- WHERE & ORDER BY: List all Unpaid Bills ordered by Due Date
+SELECT 
+    BillID,
+    AccountID,
+    TotalAmount,
+    DueDate
+FROM 
+    BILL
+WHERE 
+    PaymentStatus = 'Unpaid'
+ORDER BY 
+    DueDate ASC;
+
+-- ================================================================
+-- Update and Delete Operations
+-- ================================================================
+
+-- UPDATE: Change the phone number for Customer 'CUST-0001'
+UPDATE CUSTOMER
+SET PhoneNumber = 3219876543
+WHERE CustomerID = 'CUST-0001';
+
+-- DELETE: Remove Payment record 'PAY-0045'
+DELETE FROM PAYMENT
+WHERE PaymentID = 'PAY-0045';
+
+-- ================================================================
+-- View & Function / Procedure
+-- ================================================================
+
+-- CREATE VIEW: details of Customers and their latest Bill status
+CREATE VIEW View_CustomerPaymentStatus AS
+SELECT 
+    C.CustomerID,
+    C.FirstName,
+    C.LastName,
+    B.BillID,
+    B.TotalAmount,
+    B.PaymentStatus
+FROM 
+    CUSTOMER C
+JOIN 
+    ACCOUNT A ON C.CustomerID = A.CustomerID
+JOIN 
+    BILL B ON A.AccountID = B.AccountID;
+
+-- CREATE PROCEDURE: Get total units consumed by a specific customer
+DELIMITER //
+CREATE PROCEDURE GetCustomerTotalUsage(IN cust_id VARCHAR(20))
+BEGIN
+    SELECT 
+        SUM(B.UnitsConsumed) AS TotalUnits
+    FROM 
+        CUSTOMER C
+    JOIN 
+        ACCOUNT A ON C.CustomerID = A.CustomerID
+    JOIN 
+        BILL B ON A.AccountID = B.AccountID
+    WHERE 
+        C.CustomerID = cust_id;
+END //
+DELIMITER ;
