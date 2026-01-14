@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing - PowerPay</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
+    <link rel="stylesheet" href="../../assets/css/global.css?v=3">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar slideInLeft">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <i class="fa-solid fa-bolt" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+                    PowerPay Admin
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="../dashboard/dashboard.html" class="nav-link">
+                        <i class="fa-solid fa-chart-line nav-icon"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../customers/customers.html" class="nav-link">
+                        <i class="fa-solid fa-users nav-icon"></i>
+                        Customers
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link active">
+                        <i class="fa-solid fa-file-invoice-dollar nav-icon"></i>
+                        Billing
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../charges/charges.html" class="nav-link">
+                        <i class="fa-solid fa-tags nav-icon"></i>
+                        Charges
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="user-mini-profile">
+                    <div class="user-info">
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <button class="btn-logout" onclick="Session.logout()" title="Logout">
+                        <i class="fa-solid fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1 class="page-title">Billing & Invoices</h1>
+            </div>
+
+            <div class="table-container animate-fade-in">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Bill ID</th>
+                            <th>Account ID</th>
+                            <th>Issue Date</th>
+                            <th>Due Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="billing-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Scripts -->
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script>
+        Session.requireAdmin();
+
+        async function initPage() {
+            try {
+                const bills = await API.getBills('all');
+                renderBills(bills);
+            } catch (e) {
+                console.error("Error loading bills", e);
+                document.getElementById('billing-table-body').innerHTML = '<tr><td colspan="6">Error loading data</td></tr>';
+            }
+        }
+
+        function renderBills(list) {
+            const tbody = document.getElementById('billing-table-body');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No bills found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map(b => `
+                <tr>
+                    <td>${b.BillID}</td>
+                    <td>${b.AccountID}</td>
+                    <td>${new Date(b.IssueDate).toLocaleDateString()}</td>
+                    <td>${new Date(b.DueDate).toLocaleDateString()}</td>
+                    <td style="font-family:monospace; font-weight:600;">PKR ${b.TotalAmount.toFixed(2)}</td>
+                    <td>
+                        <span class="status-badge ${b.PaymentStatus === 'Paid' ? 'status-paid' : 'status-unpaid'}">
+                            ${b.PaymentStatus}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        initPage();
+    </script>
+</body>
+
+</html>

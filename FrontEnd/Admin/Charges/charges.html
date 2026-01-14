@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Charges - PowerPay</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/global.css?v=3">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Container -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header Container -->
+            <div id="header-container"></div>
+
+            <!-- Charges Table -->
+            <div class="table-container animate-fade-in">
+                <div
+                    style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 600;">Current Tariffs</h3>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Manage unit rates
+                            and fixed charges for customer utilities.</p>
+                    </div>
+                    <button onclick="saveCharges()" class="btn-primary"
+                        style="background: var(--primary-color); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-save"></i> Save Changes
+                    </button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Utility</th>
+                            <th>Rate / Unit (PKR)</th>
+                            <th>Fixed Charge</th>
+                            <th>Tax (%)</th>
+                            <th>Service Fee</th>
+                        </tr>
+                    </thead>
+                    <tbody id="charges-table">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script src="../../assets/js/admin_layout.js"></script>
+    <script>
+        Session.requireAdmin();
+
+        // Init Layout
+        AdminLayout.renderSidebar('charges');
+        AdminLayout.renderHeader('Utility Charges');
+
+        let currentCharges = [];
+
+        async function initPage() {
+            try {
+                currentCharges = await API.getCharges();
+                renderCharges();
+            } catch (e) {
+                console.error("Failed to load charges", e);
+            }
+        }
+
+        function renderCharges() {
+            const tbody = document.getElementById('charges-table');
+            if (!currentCharges || currentCharges.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem; color: #94a3b8;">No charges configuration found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = currentCharges.map(c => `
+                <tr>
+                    <td>
+                        <div style="font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: var(--primary-color);">
+                                <i class="fa-solid ${getUtilityIcon(c.UtilityType)}"></i>
+                            </div>
+                            ${c.UtilityType}
+                        </div>
+                    </td>
+                    <td>
+                        <input type="number" step="0.1" value="${c.RatePerUnit}" 
+                               onchange="updateLocalCharge('${c.UtilityType}', 'RatePerUnit', this.value)"
+                               class="form-input-table">
+                    </td>
+                    <td>
+                         <input type="number" step="10" value="${c.FixedCharge}" 
+                               onchange="updateLocalCharge('${c.UtilityType}', 'FixedCharge', this.value)"
+                               class="form-input-table">
+                    </td>
+                    <td>
+                         <input type="number" step="1" value="${c.TaxPercentage}" 
+                               onchange="updateLocalCharge('${c.UtilityType}', 'TaxPercentage', this.value)"
+                               class="form-input-table">    
+                    </td>
+                    <td>
+                        <input type="number" step="1" value="${c.ServiceFee}" 
+                               onchange="updateLocalCharge('${c.UtilityType}', 'ServiceFee', this.value)"
+                               class="form-input-table">
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getUtilityIcon(type) {
+            if (type === 'Electricity') return 'fa-bolt';
+            if (type === 'Gas') return 'fa-fire';
+            if (type === 'Water') return 'fa-droplet';
+            return 'fa-star';
+        }
+
+        function updateLocalCharge(type, field, value) {
+            const charge = currentCharges.find(c => c.UtilityType === type);
+            if (charge) {
+                charge[field] = parseFloat(value);
+            }
+        }
+
+        async function saveCharges() {
+            if (!confirm('Are you sure you want to save these changes to the tariffs? This will affect future bills.')) return;
+
+            try {
+                const res = await API.updateCharges(currentCharges);
+                if (res.success) {
+                    alert('Charges Updated Successfully');
+                    initPage(); // Reload
+                } else {
+                    alert('Failed to update: ' + (res.error || 'Server Error'));
+                }
+            } catch (e) {
+                alert('Connection Error');
+            }
+        }
+
+        initPage();
+    </script>
+
+    <style>
+        .form-input-table {
+            width: 100%;
+            max-width: 120px;
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            font-family: inherit;
+            color: var(--text-main);
+            transition: all 0.2s;
+        }
+
+        .form-input-table:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+    </style>
+</body>
+
+</html>
