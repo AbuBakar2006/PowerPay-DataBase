@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PowerPay</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles (Relative path for Admin folder) -->
+    <link rel="stylesheet" href="../../assets/css/global.css?v=3">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Floating Sidebar (JS Rendered) -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Topbar (JS Rendered) -->
+            <div id="header-container"></div>
+
+            <!-- Stats Grid -->
+            <div class="dashboard-grid animate-slide-up">
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <div class="stats-icon">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="stats-value" id="total-customers">--</div>
+                    <div class="stats-title">Total Customers</div>
+                    <i class="fa-solid fa-users stats-icon-bg"></i>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <div class="stats-icon" style="color: var(--warning-color); background: #fffbeb;">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                    </div>
+                    <div class="stats-value" id="pending-requests" style="color: var(--warning-color);">--</div>
+                    <div class="stats-title">Pending Requests</div>
+                    <i class="fa-solid fa-clock stats-icon-bg" style="color: var(--warning-color);"></i>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <div class="stats-icon" style="color: var(--success-color); background: #dcfce7;">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                    </div>
+                    <div class="stats-value" id="total-revenue">--</div>
+                    <div class="stats-title">Total Revenue (PKR)</div>
+                    <i class="fa-solid fa-chart-line stats-icon-bg" style="color: var(--success-color);"></i>
+                </div>
+                <!-- Paid Bills -->
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <div class="stats-icon" style="color: var(--success-color); background: #dcfce7;">
+                            <i class="fa-solid fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="stats-value" id="paid-bills-count">--</div>
+                    <div class="stats-title">Paid Bills</div>
+                    <div class="stats-desc"
+                        style="font-size: 0.9rem; color: var(--secondary-color); margin-top: 0.5rem;">
+                        Total: PKR <span id="paid-bills-amount">--</span>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <div class="stats-icon" style="color: var(--danger-color); background: #fee2e2;">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+                    </div>
+                    <div class="stats-value" id="unpaid-bills">--</div>
+                    <div class="stats-title">Unpaid Bills</div>
+                    <div class="stats-desc"
+                        style="font-size: 0.9rem; color: var(--secondary-color); margin-top: 0.5rem;">
+                        Total: PKR <span id="unpaid-bills-amount">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connection Requests -->
+            <div class="table-container animate-slide-up" style="margin-bottom: 2rem; animation-delay: 0.1s;">
+                <div class="table-header">
+                    <div class="table-title">New Connection Requests</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Customer</th>
+                            <th>Utility Type</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="connection-requests-table">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Disconnection Requests -->
+            <div class="table-container animate-slide-up" style="margin-bottom: 2rem; animation-delay: 0.2s;">
+                <div class="table-header">
+                    <div class="table-title" style="color: var(--danger-color);">Disconnection Requests</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Customer</th>
+                            <th>Utility Type</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="disconnection-requests-table">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script src="../../assets/js/admin_layout.js"></script>
+    <script>
+        // Check Auth
+        Session.requireAdmin();
+
+        // Init Layout
+        AdminLayout.renderSidebar('dashboard');
+        AdminLayout.renderHeader('Admin Dashboard');
+
+        // Load Data
+        async function initDashboard() {
+            try {
+                // Fetch Stats
+                const stats = await API.getAdminStats();
+                if (stats) {
+                    document.getElementById('total-customers').textContent = stats.total_customers;
+                    document.getElementById('pending-requests').textContent = stats.pending_requests;
+                    document.getElementById('total-revenue').textContent = stats.total_revenue.toLocaleString();
+
+                    // Paid Bills
+                    if (document.getElementById('paid-bills-count'))
+                        document.getElementById('paid-bills-count').textContent = stats.PaidBillsCount;
+                    if (document.getElementById('paid-bills-amount'))
+                        document.getElementById('paid-bills-amount').textContent = stats.PaidBillsAmount.toLocaleString();
+
+                    // Unpaid Bills
+                    if (document.getElementById('unpaid-bills'))
+                        document.getElementById('unpaid-bills').textContent = stats.UnpaidBillsCount; // Use UnpaidBillsCount from detailed stats
+                    if (document.getElementById('unpaid-bills-amount'))
+                        document.getElementById('unpaid-bills-amount').textContent = stats.UnpaidBillsAmount.toLocaleString();
+                }
+
+                // Fetch Requests
+                const requests = await API.getRequests();
+                renderRequestsTable(requests || []);
+
+            } catch (e) {
+                console.error("Dashboard Load Error", e);
+            }
+        }
+
+        function renderRequestsTable(requests) {
+            const connectTable = document.getElementById('connection-requests-table');
+            const disconnectTable = document.getElementById('disconnection-requests-table');
+
+            const connections = requests.filter(r => r.Status === 'Pending Connection' || r.Status === 'Pending');
+            // Fix: Use includes for robustness
+            const disconnections = requests.filter(r => r.Status && r.Status.includes('Disconnect'));
+
+            renderTableRows(connectTable, connections, 'connect');
+            renderTableRows(disconnectTable, disconnections, 'disconnect');
+        }
+
+        function renderTableRows(container, list, type) {
+            if (list.length === 0) {
+                container.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: #94a3b8;">No pending requests</td></tr>';
+                return;
+            }
+
+            container.innerHTML = list.map(r => {
+                let badgeClass = 'status-pending';
+                let actionLabel = 'Approve';
+                let actionArg = 'connect'; // Default
+
+                if (type === 'disconnect') {
+                    actionLabel = 'Approve Disconnect';
+                    actionArg = 'disconnect';
+                    badgeClass = 'status-unpaid'; // Red-ish for disconnect
+                }
+
+                return `
+                <tr>
+                    <td>${r.RequestID}</td>
+                    <td>${r.CustomerID}</td>
+                    <td>${r.UtilityType || 'Account'}</td>
+                    <td>${r.RequestDate ? new Date(r.RequestDate).toLocaleDateString() : 'Today'}</td>
+                    <td>
+                        <span class="status-badge ${badgeClass}">
+                            ${r.Status}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:0.5rem;">
+                            <button onclick="approveRequest('${r.RequestID}', '${actionArg}')" 
+                                    style="padding: 0.5rem 0.8rem; background: var(--success-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.8rem;">
+                                ${actionLabel}
+                            </button>
+                            <button onclick="rejectRequest('${r.RequestID}')" 
+                                    style="padding: 0.5rem 0.8rem; background: var(--danger-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.8rem;"
+                                    title="Reject Request">
+                                Deny
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        async function approveRequest(reqId, action) {
+            if (confirm('Are you sure you want to approve this request?')) {
+                const res = await API.updateRequest(reqId, 'Approved', action);
+                if (res.success) {
+                    initDashboard(); // Reload data
+                } else {
+                    alert('Error: ' + (res.error || 'Unknown Error'));
+                }
+            }
+        }
+
+        async function rejectRequest(reqId) {
+            if (confirm('Are you sure you want to DENY this request?')) {
+                const res = await API.updateRequest(reqId, 'Rejected');
+                if (res.success) {
+                    initDashboard();
+                } else {
+                    alert('Error: ' + res.error);
+                }
+            }
+        }
+
+        // Initialize
+        initDashboard();
+    </script>
+</body>
+
+</html>
