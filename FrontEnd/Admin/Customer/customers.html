@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers - PowerPay Admin</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
+    <link rel="stylesheet" href="../../assets/css/global.css?v=3">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar slideInLeft">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <i class="fa-solid fa-bolt" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+                    PowerPay Admin
+                </div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="../dashboard/dashboard.html" class="nav-link">
+                        <i class="fa-solid fa-chart-line nav-icon"></i>
+                        Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link active">
+                        <i class="fa-solid fa-users nav-icon"></i>
+                        Customers
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../billing/billing.html" class="nav-link">
+                        <i class="fa-solid fa-file-invoice-dollar nav-icon"></i>
+                        Billing
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="../charges/charges.html" class="nav-link">
+                        <i class="fa-solid fa-tags nav-icon"></i>
+                        Charges
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="user-mini-profile">
+                    <div class="user-info">
+                        <div class="user-role">Administrator</div>
+                    </div>
+                    <button class="btn-logout" onclick="Session.logout()" title="Logout">
+                        <i class="fa-solid fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1 class="page-title">Customer Management</h1>
+            </div>
+
+            <div class="table-container animate-fade-in">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Customer ID</th>
+                            <th>Name / Email</th>
+                            <th>Phone</th>
+                            <th>City</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customers-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="details-modal"
+        style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+        <div
+            style="background-color: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 600px; position: relative; max-height: 90vh; overflow-y: auto;">
+            <span onclick="closeDetails()"
+                style="position: absolute; top: 1rem; right: 1.5rem; font-size: 1.5rem; font-weight: bold; cursor: pointer; color: #aaa;">&times;</span>
+            <h2 id="modal-title" style="margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 1rem;">
+                Customer Details</h2>
+            <div id="modal-content-body">
+                <!-- Content -->
+            </div>
+        </div>
+    </div>
+    </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <!-- app.js usage removed as we inline specific logic or update app.js to be async. 
+         Since app.js is shared, updating it requires care. 
+         For now, I'll inline the specific logic to ensure this page works with API immediately. -->
+    <script>
+        // Auth check
+        Session.requireAdmin();
+
+
+        // --- Modal Logic ---
+        async function openDetails(customerId, name) {
+            const modal = document.getElementById('details-modal');
+            const content = document.getElementById('modal-content-body');
+            const title = document.getElementById('modal-title');
+
+            title.textContent = `Details for ${name}`;
+            content.innerHTML = '<div style="text-align:center; padding: 2rem;">Loading details...</div>';
+            modal.style.display = 'flex';
+
+            try {
+                const data = await API.getCustomerDetails(customerId);
+
+                let html = '';
+
+                // Accounts Section
+                html += '<h3 style="font-size:1.1rem; font-weight:600; margin-bottom:1rem; color:var(--text-main);">Accounts</h3>';
+                if (data.accounts && data.accounts.length > 0) {
+                    html += '<div style="display:grid; gap:1rem; margin-bottom:2rem;">';
+                    data.accounts.forEach(acc => {
+                        html += `
+                            <div style="background:#f8fafc; padding:1rem; border-radius:6px; border:1px solid #e2e8f0;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                                    <span style="font-weight:600;">${acc.AccountID}</span>
+                                    <span class="status-badge status-active">${acc.Status || 'Active'}</span>
+                                </div>
+                                <div style="font-size:0.9rem; color:var(--text-muted);">
+                                    <div>Type: ${acc.AccountType}</div>
+                                    <div>Balance: PKR ${acc.Balance}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                } else {
+                    html += '<div style="color:#94a3b8; font-style:italic; margin-bottom:2rem;">No accounts found.</div>';
+                }
+
+                // Meters Section
+                html += '<h3 style="font-size:1.1rem; font-weight:600; margin-bottom:1rem; color:var(--text-main);">Linked Meters</h3>';
+                if (data.meters && data.meters.length > 0) {
+                    html += '<table style="width:100%; font-size:0.9rem;"><thead><tr><th style="text-align:center; padding-bottom:0.5rem;">Meter No</th><th style="text-align:center; padding-bottom:0.5rem;">Type</th><th style="text-align:center; padding-bottom:0.5rem;">Reading</th></tr></thead><tbody>';
+                    data.meters.forEach(m => {
+                        html += `
+                            <tr>
+                                <td style="padding:0.5rem 0; border-top:1px solid #eee; text-align:center;">${m.MeterNumber}</td>
+                                <td style="padding:0.5rem 0; border-top:1px solid #eee; text-align:center;">${m.MeterType}</td>
+                                <td style="padding:0.5rem 0; border-top:1px solid #eee; text-align:center;">${m.CurrentReading}</td>
+                            </tr>
+                         `;
+                    });
+                    html += '</tbody></table>';
+                } else {
+                    html += '<div style="color:#94a3b8; font-style:italic;">No meters found.</div>';
+                }
+
+                content.innerHTML = html;
+
+            } catch (e) {
+                console.error(e);
+                content.innerHTML = '<div style="color:red; text-align:center;">Failed to load details.</div>';
+            }
+        }
+
+        function closeDetails() {
+            document.getElementById('details-modal').style.display = 'none';
+        }
+
+        // Close on outside click
+        window.onclick = function (event) {
+            const modal = document.getElementById('details-modal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        async function initPage() {
+            try {
+                const customers = await API.getCustomers();
+                renderCustomers(customers);
+            } catch (e) {
+                console.error('Error loading customers', e);
+                document.getElementById('customers-table-body').innerHTML = '<tr><td colspan="5">Error loading data</td></tr>';
+            }
+        }
+
+        function renderCustomers(list) {
+            const tbody = document.getElementById('customers-table-body');
+            tbody.innerHTML = list.map(c => `
+                <tr onclick="openDetails('${c.CustomerID}', '${c.FirstName} ${c.LastName}')">
+                    <td>${c.CustomerID}</td>
+                    <td>
+                        <div style="font-weight: 500; color:var(--primary-color);">
+                            ${c.FirstName} ${c.LastName}
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">${c.Email}</div>
+                    </td>
+                    <td>${c.PhoneNumber}</td>
+                    <td>${c.City}</td>
+                    <td>
+                        <span class="status-badge ${c.AccountStatus === 'Active' ? 'status-active' : 'status-inactive'}">
+                            ${c.AccountStatus}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        initPage();
+    </script>
+</body>
+
+</html>
