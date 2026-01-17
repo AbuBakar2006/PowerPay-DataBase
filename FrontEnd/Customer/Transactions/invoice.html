@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice - PowerPay</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
+    <link rel="stylesheet" href="../../assets/css/global.css?v=3">
+    <style>
+        .invoice-paper {
+            background: white;
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 3rem;
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 3rem;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 2rem;
+        }
+
+        .invoice-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+
+        .invoice-row:last-child {
+            border-bottom: none;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px solid #0f172a;
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <div id="header-container"></div>
+
+            <button onclick="history.back()"
+                style="background:none; border:none; cursor:pointer; color:var(--text-muted); margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+                <i class="fa-solid fa-arrow-left"></i> Back to Transactions
+            </button>
+
+            <!-- Loading State -->
+            <div id="loading" style="text-align: center; padding: 4rem;">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i>
+                <p style="margin-top: 1rem; color: var(--text-muted);">Loading Invoice...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="error-msg" style="display: none; text-align: center; padding: 4rem; color: var(--danger-color);">
+                <i class="fa-solid fa-circle-exclamation" style="font-size: 2rem;"></i>
+                <p style="margin-top: 1rem;" id="error-text">Invoice not found</p>
+            </div>
+
+            <!-- Invoice Content -->
+            <div id="invoice-content" class="invoice-paper animate-slide-up" style="display: none;">
+
+                <div class="invoice-header">
+                    <div>
+                        <div class="brand"
+                            style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.5rem;">
+                            <i class="fa-solid fa-bolt"></i> PowerPay
+                        </div>
+                        <p class="text-muted">Utility Billing Service</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <h2 style="margin: 0; color: var(--text-main);">INVOICE</h2>
+                        <p style="color: var(--text-muted); margin-top: 0.25rem;">#<span id="inv-id">--</span></p>
+                        <div style="margin-top: 0.5rem;">
+                            <span class="status-badge status-unpaid" id="inv-status">UNPAID</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem;">
+                    <div>
+                        <h4
+                            style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                            Bill To</h4>
+                        <div style="font-weight: 600; font-size: 1.1rem;" id="cust-name">--</div>
+                        <div style="color: var(--text-muted); margin-top: 0.25rem;" id="cust-address">--</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="margin-bottom: 0.5rem;">
+                            <span style="color: var(--text-muted); margin-right: 1rem;">Issue Date:</span>
+                            <span style="font-weight: 600;" id="inv-date">--</span>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted); margin-right: 1rem;">Due Date:</span>
+                            <span style="font-weight: 600;" id="inv-due">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 3rem;">
+                    <h3 style="margin-bottom: 1.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem;">Charges
+                        Breakdown</h3>
+
+                    <div class="invoice-row">
+                        <span>Energy Consumption Charges</span>
+                        <span id="inv-energy">PKR 0.00</span>
+                    </div>
+                    <div class="invoice-row">
+                        <span>Fixed Service Charges</span>
+                        <span id="inv-service">PKR 0.00</span>
+                    </div>
+                    <div class="invoice-row">
+                        <span>Government Tax & Levies</span>
+                        <span id="inv-tax">PKR 0.00</span>
+                    </div>
+
+                    <div class="total-row">
+                        <span>Total Payble</span>
+                        <span style="color: var(--primary-color);" id="inv-total">PKR 0.00</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; align-items: center;">
+                    <button onclick="window.print()"
+                        style="background: white; border: 1px solid #cbd5e1; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                        <i class="fa-solid fa-print"></i> Print
+                    </button>
+                    <button id="pay-btn" onclick="processPayment()"
+                        style="background: var(--primary-color); color: white; border: none; padding: 0.75rem 2rem; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 1rem; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);">
+                        Pay Now <i class="fa-solid fa-arrow-right" style="margin-left: 0.5rem;"></i>
+                    </button>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script src="../../assets/js/layout.js"></script>
+    <script>
+        Layout.renderSidebar('transactions'); // Highlight transactions tab
+        Layout.renderHeader('Bill Invoice', 'Review details before payment');
+
+        const customerId = Session.requireCustomer();
+        const urlParams = new URLSearchParams(window.location.search);
+        const billId = urlParams.get('billId');
+
+        let currentBill = null;
+
+        async function initPage() {
+            if (!billId) {
+                showError('No Bill ID provided');
+                return;
+            }
+
+            try {
+                // Fetch All Bills for Customer to find this one (Assuming API doesn't support get single bill publicly yet)
+                // In production, should fetch specific bill.
+                const bills = await API.getBills(customerId);
+                currentBill = bills.find(b => b.BillID === billId);
+
+                if (!currentBill) {
+                    showError('Bill not found or access denied');
+                    return;
+                }
+
+                // Also fetch customer details for address
+                const userRes = await API.getCustomerDetails(customerId);
+                const user = userRes.customer;
+
+                renderInvoice(currentBill, user);
+
+            } catch (e) {
+                console.error(e);
+                showError('Failed to load invoice');
+            }
+        }
+
+        function renderInvoice(bill, user) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('invoice-content').style.display = 'block';
+
+            // Meta
+            document.getElementById('inv-id').textContent = bill.BillID;
+            document.getElementById('inv-date').textContent = new Date(bill.IssueDate).toLocaleDateString();
+            document.getElementById('inv-due').textContent = new Date(bill.DueDate).toLocaleDateString();
+
+            // Status
+            const badge = document.getElementById('inv-status');
+            badge.textContent = bill.PaymentStatus.toUpperCase();
+            badge.className = `status-badge ${bill.PaymentStatus === 'Paid' ? 'status-paid' : 'status-unpaid'}`;
+
+            // Customer
+            document.getElementById('cust-name').textContent = user.FirstName + ' ' + user.LastName;
+            document.getElementById('cust-address').textContent = `${user.ServiceAddress}, ${user.City}`;
+
+            // Money
+            // Synthesize breakdown if unavailable
+            const total = bill.TotalAmount;
+            const tax = bill.TaxAmount || (total * 0.15);
+            const service = bill.ServiceCharges || 50.0;
+            const energy = total - tax - service;
+
+            document.getElementById('inv-energy').textContent = 'PKR ' + energy.toFixed(2);
+            document.getElementById('inv-service').textContent = 'PKR ' + service.toFixed(2);
+            document.getElementById('inv-tax').textContent = 'PKR ' + tax.toFixed(2);
+            document.getElementById('inv-total').textContent = 'PKR ' + total.toFixed(2);
+
+            // Hide Pay button if already paid
+            if (bill.PaymentStatus === 'Paid') {
+                document.getElementById('pay-btn').style.display = 'none';
+            }
+        }
+
+        function showError(msg) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error-msg').style.display = 'block';
+            document.getElementById('error-text').textContent = msg;
+        }
+
+        async function processPayment() {
+            if (!currentBill) return;
+
+            const btn = document.getElementById('pay-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
+
+            try {
+                const res = await API.payBill({ billId: currentBill.BillID, amount: currentBill.TotalAmount });
+                if (res.success) {
+                    // Success Animation or Redirect
+                    alert('Payment Successful!');
+                    window.location.reload(); // Reload to show PAID status
+                } else {
+                    alert('Error: ' + res.message);
+                    btn.innerHTML = 'Pay Now';
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                alert('Connection Error');
+                btn.disabled = false;
+            }
+        }
+
+        initPage();
+    </script>
+</body>
+
+</html>
