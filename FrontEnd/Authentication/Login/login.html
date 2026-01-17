@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - PowerPay</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
+    <!-- Styles -->
+    <link rel="stylesheet" href="../../assets/css/global.css">
+    <link rel="stylesheet" href="login.css">
+</head>
+
+<body>
+    <div class="auth-card animate-slide-up">
+        <a href="../../home/home.html" class="back-arrow-btn" title="Back to Home">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div class="auth-header">
+            <div class="auth-brand">PowerPay</div>
+            <div class="auth-subtitle">Sign in to manage your utilities</div>
+        </div>
+
+        <div class="role-selector">
+            <div class="role-btn active" id="btn-customer" onclick="toggleRole('customer')">Customer</div>
+            <div class="role-btn" id="btn-admin" onclick="toggleRole('admin')">Admin</div>
+        </div>
+
+        <div id="customer-form">
+            <div class="form-group">
+                <label class="form-label">Select Demo Customer</label>
+                <select class="form-select" id="customer-select">
+                    <!-- Populated by JS -->
+                </select>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                    Tip: Select a user to simulate logging in.
+                </div>
+            </div>
+            <button class="btn-primary w-100" onclick="handleLogin()">Login</button>
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.95rem; font-weight: 500; color: #cbd5e1;">
+                New User? <a href="../signup/signup.html" class="btn-link"
+                    style="color: var(--primary-color); font-weight: 700;">Create Account</a>
+            </div>
+        </div>
+
+        <div id="admin-form" style="display: none;">
+            <div class="form-group">
+                <label class="form-label">Admin Pin</label>
+                <input type="password" value="1234" disabled class="form-input"
+                    style="cursor: not-allowed; opacity: 0.7;">
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">(Pre-filled for demo)
+                </div>
+            </div>
+            <button class="btn-primary w-100" onclick="handleLogin()">Login to Dashboard</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script>
+        // Init
+        async function initLogin() {
+            const select = document.getElementById('customer-select');
+
+            try {
+                // Fetch customers from API
+                const customers = await API.getCustomers();
+
+                if (!customers || customers.length === 0) {
+                    const option = document.createElement('option');
+                    option.text = "No customers found / DB Error";
+                    select.add(option);
+                    return;
+                }
+
+                customers.forEach(c => {
+                    const option = document.createElement('option');
+                    option.value = c.CustomerID;
+                    option.textContent = `${c.CustomerID} - ${c.FirstName} ${c.LastName}`;
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error("Failed to load customers", e);
+                select.innerHTML = '<option>Error loading customers. Is Backend running?</option>';
+            }
+        }
+
+        initLogin();
+
+        let currentRole = 'customer';
+
+        function toggleRole(role) {
+            currentRole = role;
+            document.getElementById('btn-customer').classList.toggle('active', role === 'customer');
+            document.getElementById('btn-admin').classList.toggle('active', role === 'admin');
+            document.getElementById('customer-form').style.display = role === 'customer' ? 'block' : 'none';
+            document.getElementById('admin-form').style.display = role === 'admin' ? 'block' : 'none';
+        }
+
+        async function handleLogin() {
+            if (currentRole === 'admin') {
+                // Admin Hardcoded for now in backend too
+                const res = await API.login('admin');
+                if (res.success) {
+                    Session.loginAdmin();
+                } else {
+                    alert('Admin Login Failed');
+                }
+            } else {
+                const customerId = document.getElementById('customer-select').value;
+                if (!customerId) return;
+
+                const res = await API.login('customer', customerId);
+                if (res.success) {
+                    Session.loginCustomer(customerId);
+                } else {
+                    alert(res.message || 'Login Failed');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
