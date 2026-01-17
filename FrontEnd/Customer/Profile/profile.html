@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - PowerPay</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
+    <link rel="stylesheet" href="../../assets/css/global.css?v=3">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Floating Sidebar (JS Rendered) -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Topbar (JS Rendered) -->
+            <div id="header-container"></div>
+
+            <!-- Edit Profile -->
+            <div class="glass-panel animate-slide-up"
+                style="padding: 1.5rem; animation-delay: 0.1s; margin-bottom: 2rem; max-width: 100%;">
+                <div class="table-header" style="padding: 0 0 1.5rem 0;">
+                    <div class="table-title">Edit Profile</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div class="form-group">
+                        <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">First
+                            Name</label>
+                        <input type="text" id="fname" disabled class="form-select" style="background-color: #f1f5f9;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Last
+                            Name</label>
+                        <input type="text" id="lname" disabled class="form-select" style="background-color: #f1f5f9;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Phone
+                            Number</label>
+                        <input type="text" id="phone" class="form-select" style="padding: 0.5rem; width: 100%;">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"
+                            style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email</label>
+                        <input type="email" id="email" class="form-select" style="padding: 0.5rem; width: 100%;">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label class="form-label"
+                            style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Address</label>
+                        <input type="text" id="address" class="form-select" style="padding: 0.5rem; width: 100%;">
+                    </div>
+                </div>
+                <button onclick="updateProfile()"
+                    style="margin-top: 1.5rem; background: var(--primary-color); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer;">Save
+                    Changes</button>
+            </div>
+
+            <!-- Delete Account -->
+            <div class="glass-panel animate-slide-up"
+                style="padding: 1.5rem; animation-delay: 0.2s; max-width: 100%; border: 1px solid #fee2e2; background: #fef2f2;">
+                <div class="table-header" style="border-bottom: 1px solid #fecaca; padding: 0 0 1rem 0;">
+                    <div class="table-title" style="color: var(--danger-color);">Delete Account</div>
+                </div>
+                <p style="color: var(--text-muted); margin: 1rem 0;">Once you delete your account, there is no going
+                    back.
+                    Please be certain.</p>
+                <button class="btn btn-danger" onclick="deleteAccount()"
+                    style="background: var(--danger-color); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer;">
+                    Delete Account
+                </button>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script src="../../assets/js/layout.js"></script>
+    <script>
+        // Init Layout
+        Layout.renderSidebar('profile');
+        Layout.renderHeader('Settings', 'Manage your profile and account');
+
+        // Init
+        const customerId = Session.requireCustomer();
+
+        async function initPage() {
+            try {
+                const apiResponse = await API.getCustomerDetails(customerId);
+                const customerProfile = apiResponse.customer;
+
+                console.log("Profile Data:", customerProfile);
+
+                if (customerProfile) {
+                    // Update Sidebar
+                    document.getElementById('user-name-sidebar').textContent = customerProfile.FirstName + ' ' + customerProfile.LastName;
+
+                    // Populate Form
+                    document.getElementById('fname').value = customerProfile.FirstName;
+                    document.getElementById('lname').value = customerProfile.LastName;
+                    document.getElementById('phone').value = customerProfile.PhoneNumber;
+                    document.getElementById('email').value = customerProfile.Email;
+                    // Append City and ZipCode to Address
+                    const fullAddress = `${customerProfile.ServiceAddress}, ${customerProfile.City}, ${customerProfile.ZipCode}`;
+                    document.getElementById('address').value = fullAddress;
+                }
+
+            } catch (e) {
+                console.error("Profile Load Error", e);
+            }
+        }
+
+        // Actions
+        function updateProfile() {
+            // Placeholder: Backend API for updating user profile not implemented yet in App.py
+            alert('Profile updated successfully! (Frontend Simulation)');
+        }
+
+        async function requestRemoval(type, dues) {
+            if (dues > 0) {
+                alert(`Cannot remove ${type} utility. You have pending dues of PKR ${dues.toFixed(2)}. Please pay your bills first.`);
+                return;
+            }
+            if (confirm(`Are you sure you want to request disconnection of your ${type} utility?`)) {
+                // Submit Request
+                const reqData = {
+                    RequestID: 'REQ-' + Math.floor(Math.random() * 10000),
+                    CustomerID: user.CustomerID,
+                    UtilityType: type,
+                    Status: 'Pending Disconnect'
+                };
+
+                const res = await API.createRequest(reqData);
+                if (res.success) {
+                    alert('Disconnection request submitted to Admin.');
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert('Error: ' + (res.error || 'Failed'));
+                }
+            }
+        }
+
+        async function deleteAccount() {
+            try {
+                // Check eligibility via API
+                const check = await API.checkDeletionEligibility(customerId);
+
+                if (!check.allowed) {
+                    alert(check.message);
+                    return;
+                }
+            } catch (e) {
+                console.error("Deletion Check Failed", e);
+                alert("Could not verify account status. Please try again.");
+                return;
+            }
+
+            if (confirm('WARNING: This action cannot be undone. Are you sure you want to delete your account?')) {
+                // Submit Account Closure Request
+                const reqData = {
+                    RequestID: 'REQ-CLOSE-' + Math.floor(Math.random() * 10000),
+                    CustomerID: user.CustomerID,
+                    UtilityType: 'ACCOUNT_CLOSURE',
+                    Status: 'Pending Closure'
+                };
+
+                const res = await API.createRequest(reqData);
+                if (res.success) {
+                    alert('Account Closure Request submitted. An admin will finalize the process.');
+                    Session.logout();
+                } else {
+                    alert('Error: ' + (res.error || 'Failed'));
+                }
+            }
+        }
+
+        initPage();
+    </script>
+</body>
+
+</html>
