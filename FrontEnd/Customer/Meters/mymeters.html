@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Meters - PowerPay</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/global.css?v=3">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Floating Sidebar (JS Rendered) -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content fadeIn">
+            <!-- Topbar (JS Rendered) -->
+            <div id="header-container"></div>
+
+            <div style="width: 100%;">
+
+                <!-- Request New Connection -->
+                <div class="glass-panel animate-slide-up"
+                    style="padding: 1.5rem; animation-delay: 0.1s; margin-bottom: 2rem;">
+                    <div class="table-header">
+                        <div class="table-title">Request New Connection</div>
+                    </div>
+                    <div style="display:flex; gap:1rem; align-items: flex-end; margin-top:1rem;">
+                        <div class="form-group" style="flex:1; margin-bottom:0;">
+                            <label class="form-label">Utility Type</label>
+                            <select id="request-type" class="form-select" style="width: 100%;">
+                                <option value="Electricity">Electricity</option>
+                                <option value="Gas">Gas</option>
+                                <option value="Water">Water</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" onclick="submitRequest()"
+                            style="width: auto; padding-left: 2rem; padding-right: 2rem; border-radius: 2rem; height: 42px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fa-solid fa-plus-circle" style="margin-right:0.5rem;"></i> Request
+                        </button>
+                    </div>
+                    <p id="request-msg" style="margin-top:0.5rem; font-size:0.9rem; color:var(--danger-color);"></p>
+                </div>
+
+                <!-- My Meters Table -->
+                <div class="glass-panel animate-slide-up" style="animation-delay: 0.2s; margin-bottom: 2rem;">
+                    <div class="table-header">
+                        <div class="table-title">Active Meters</div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Meter No.</th>
+                                    <th>Type</th>
+                                    <th>Reading</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="my-meters-table">
+                                <!-- Populated by JS -->
+                                <tr>
+                                    <td colspan="5" style="text-align:center;">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Recent Requests -->
+                <div class="glass-panel animate-slide-up" style="animation-delay: 0.3s; width: 100%;">
+                    <div class="table-header">
+                        <div class="table-title">Request History</div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Utility</th>
+                                    <th>Request Type</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="my-requests-table">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script src="../../assets/js/layout.js"></script>
+    <script>
+        // Init Layout
+        Layout.renderSidebar('mymeters');
+        Layout.renderHeader('My Meters', 'Manage your utility connections');
+
+        // Init Data
+        const customerId = Session.requireCustomer();
+
+        async function initPage() {
+            try {
+                // Fetch Data
+                const [userResponse, meters, bills, allRequests] = await Promise.all([
+                    API.getCustomerDetails(customerId),
+                    API.getMeters(customerId),
+                    API.getBills(customerId),
+                    API.getRequests()
+                ]);
+
+                // 3. Render
+                // Fix: API.getCustomerDetails returns { customer, accounts, meters }
+                const customerProfile = userResponse.customer;
+
+                if (customerProfile) {
+                    // Update Sidebar Name (handled by layout.js structure now)
+                    const sidebarName = document.getElementById('user-name-sidebar');
+                    if (sidebarName) sidebarName.textContent = customerProfile.FirstName + ' ' + customerProfile.LastName;
+                }
+
+                // Filter requests for this customer
+                const myRequests = allRequests.filter(r => r.CustomerID === customerId);
+
+                // Render
+                renderMeters(meters, bills);
+                renderRequests(myRequests);
+
+                // Expose for actions
+                window.pageData = { meters, myRequests, bills, customerId };
+
+            } catch (e) {
+                console.error("My Meters Load Error", e);
+                document.getElementById('my-meters-table').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Failed to load data.</td></tr>';
+            }
+        }
+
+        function renderMeters(meters, bills) {
+            const mTable = document.getElementById('my-meters-table');
+
+            if (meters && meters.length > 0) {
+                mTable.innerHTML = meters.map(m => {
+                    // Calculate Dues for this meter (Account)
+                    const meterBills = bills ? bills.filter(b => b.AccountID === m.AccountID && b.PaymentStatus === 'Unpaid') : [];
+                    const totalDues = meterBills.reduce((acc, b) => acc + b.TotalAmount, 0);
+
+                    return `
+                    <tr>
+                        <td style="font-family: monospace;">${m.MeterNumber}</td>
+                        <td>${m.MeterType}</td>
+                        <td>${m.CurrentReading}</td>
+                        <td><span class="status-badge status-active">Active</span></td>
+                        <td>
+                             <button onclick="requestRemoval('${m.MeterType}', ${totalDues}, '${customerId}')" 
+                                style="font-size: 0.8rem; padding: 0.25rem 0.5rem; color: var(--danger-color); border: 1px solid var(--danger-color); border-radius: 4px; background:white; cursor:pointer;">
+                                Request Removal
+                            </button>
+                        </td>
+                    </tr>
+                `}).join('');
+            } else {
+                mTable.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 1rem; color: #aaa;">No active meters.</td></tr>';
+            }
+        }
+
+        function renderRequests(reqs) {
+            const rTable = document.getElementById('my-requests-table');
+            if (reqs && reqs.length > 0) {
+                const sorted = reqs.sort((a, b) => new Date(b.RequestDate) - new Date(a.RequestDate));
+                rTable.innerHTML = sorted.map(r => {
+                    // Check if pending (including specific pending statuses)
+                    const isPending = r.Status.includes('Pending');
+
+                    // Derive Request Type
+                    let reqType = 'Connection'; // Default
+                    if (r.Status.includes('Disconnect')) reqType = 'Disconnection';
+                    else if (r.Status.includes('Connection')) reqType = 'New Connection';
+
+                    return `
+                    <tr>
+                        <td>${r.UtilityType}</td>
+                        <td>${reqType}</td>
+                        <td>${new Date(r.RequestDate).toLocaleDateString()}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%;">
+                                <span class="status-badge ${getStatusClass(r.Status)}">${r.Status}</span>
+                                ${isPending ? `
+                                <button onclick="cancelRequest('${r.RequestID}')" 
+                                    style="padding: 0.4rem 0.8rem; font-size: 0.8rem; color: white; background: var(--danger-color); border: none; border-radius: 0.5rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem;"
+                                    title="Cancel Request">
+                                    <i class="fa-solid fa-ban"></i> Cancel
+                                </button>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `}).join('');
+            } else {
+                rTable.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 1rem; color: #aaa;">No requests history</td></tr>';
+            }
+        }
+
+        function getStatusClass(status) {
+            if (status === 'Approved') return 'status-approved';
+            if (status === 'Pending') return 'status-pending';
+            if (status === 'Rejected') return 'status-rejected';
+            return 'status-pending';
+        }
+
+        async function submitRequest() {
+            const type = document.getElementById('request-type').value;
+            const msgEl = document.getElementById('request-msg');
+            msgEl.textContent = '';
+
+            const { meters } = window.pageData;
+
+            // Check if already has meter of this type
+            const hasMeter = meters.some(m => m.MeterType === type);
+            if (hasMeter) {
+                msgEl.textContent = `Error: You already have a ${type} meter. Duplicates not allowed.`;
+                return;
+            }
+
+            if (confirm(`Request new ${type} connection?`)) {
+                try {
+                    const reqData = {
+                        RequestID: 'REQ-' + Math.floor(Math.random() * 100000),
+                        CustomerID: customerId,
+                        UtilityType: type,
+                        Status: 'Pending Connection',
+                        action: 'connect'
+                    };
+
+                    const res = await API.createRequest(reqData);
+                    if (res.success) {
+                        alert('Connection request submitted.');
+                        location.reload();
+                    } else {
+                        msgEl.textContent = 'Failed: ' + (res.message || 'Unknown Error');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    msgEl.textContent = 'Error submitting request.';
+                }
+            }
+        }
+
+        async function requestRemoval(type, dues, cid) {
+            if (dues > 0) {
+                alert(`Cannot remove ${type} utility. You have pending dues of PKR ${dues.toFixed(2)}. Please pay your bills first.`);
+                return;
+            }
+
+            if (confirm(`Are you sure you want to request disconnection of your ${type} utility?`)) {
+                try {
+                    const reqData = {
+                        RequestID: 'REQ-' + Math.floor(Math.random() * 100000),
+                        CustomerID: cid,
+                        UtilityType: type,
+                        Status: 'Pending Disconnect',
+                        action: 'disconnect'
+                    };
+
+                    const res = await API.createRequest(reqData);
+                    if (res.success) {
+                        alert('Disconnection request submitted successfully.');
+                        location.reload();
+                    } else {
+                        alert('Failed: ' + (res.message || 'Unknown Error'));
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Error submitting request');
+                }
+            }
+        }
+
+        async function cancelRequest(reqId) {
+            if (confirm('Are you sure you want to cancel this request?')) {
+                try {
+                    const res = await API.updateRequest(reqId, 'Cancelled');
+                    if (res.success) {
+                        alert('Request Cancelled');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (res.message || 'Failed'));
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Connection Error');
+                }
+            }
+        }
+
+        // Run Init
+        initPage();
+    </script>
+</body>
+
+</html>
