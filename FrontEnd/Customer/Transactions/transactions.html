@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions - PowerPay</title>
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
+    <link rel="stylesheet" href="../../assets/css/global.css?v=3">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <div id="header-container"></div>
+
+            <!-- Bills Table -->
+            <div class="glass-panel animate-slide-up">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Bill ID</th>
+                                <th>Issue Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Paid On</th>
+                                <th>Method</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-table">
+                            <!-- JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script src="../../assets/js/layout.js"></script>
+    <script>
+        // Init Layout
+        Layout.renderSidebar('transactions');
+        Layout.renderHeader('Transactions', 'Payment history and pending bills');
+
+        const customerId = Session.requireCustomer();
+
+        async function initPage() {
+            try {
+                const bills = await API.getBills(customerId);
+                renderBills(bills);
+            } catch (e) {
+                console.error("Load Error", e);
+            }
+        }
+
+        function renderBills(list) {
+            const tbody = document.getElementById('transactions-table');
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No history found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map(b => `
+                <tr>
+                    <td>${b.BillID}</td>
+                    <td>${new Date(b.IssueDate).toLocaleDateString()}</td>
+                    <td style="font-family:monospace; font-weight:600;">PKR ${b.TotalAmount.toFixed(2)}</td>
+                    <td>
+                        <span class="status-badge ${b.PaymentStatus === 'Paid' ? 'status-paid' : 'status-unpaid'}">
+                            ${b.PaymentStatus}
+                        </span>
+                    </td>
+                    <td>${b.PaymentDate ? new Date(b.PaymentDate).toLocaleDateString() : '-'}</td>
+                    <td>${b.PaymentMethod || '-'}</td>
+                    <td style="gap:0.5rem;">
+                        <button onclick="viewInvoice('${b.BillID}')" 
+                            style="background:var(--primary-color); color:white; border:none; padding:0.25rem 0.75rem; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+                            ${b.PaymentStatus === 'Unpaid' ? 'Pay Now' : 'View Invoice'}
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function viewInvoice(id) {
+            window.location.href = `invoice.html?billId=${id}`;
+        }
+
+        initPage();
+    </script>
+</body>
+
+</html>
