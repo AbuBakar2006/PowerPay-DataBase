@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PowerPay</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/global.css?v=3">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Floating Sidebar (JS Rendered) -->
+        <div id="sidebar-container"></div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Glass Topbar (JS Rendered) -->
+            <div id="header-container"></div>
+
+            <!-- Stats Grid -->
+            <div class="dashboard-grid animate-slide-up">
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <div class="stats-icon" style="background: #f0f9ff; color: #0284c7;">
+                            <i class="fa-solid fa-gauge-high"></i>
+                        </div>
+                    </div>
+                    <div class="stats-value" id="my-meters-count">--</div>
+                    <div class="stats-title">Active Meters</div>
+                    <i class="fa-solid fa-gauge-high stats-icon-bg" style="color: #0284c7;"></i>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <div class="stats-icon" style="background: #f0fdf4; color: #16a34a;">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                    </div>
+                    <div class="stats-value" id="last-bill-amount">--</div>
+                    <div class="stats-title">Last Bill Amount</div>
+                    <i class="fa-solid fa-receipt stats-icon-bg" style="color: #16a34a;"></i>
+                </div>
+                <div class="stats-card">
+                    <div class="stats-header">
+                        <div class="stats-icon" style="background: #fef2f2; color: #dc2626;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                    </div>
+                    <div class="stats-value" id="my-unpaid-bills" style="color: var(--danger-color);">--</div>
+                    <div class="stats-title">Unpaid Dues</div>
+                    <i class="fa-solid fa-triangle-exclamation stats-icon-bg" style="color: #dc2626;"></i>
+                </div>
+            </div>
+
+            <!-- Content Grid (Requests & Rates) - Stacked Vertically as per user request -->
+            <div style="display:flex; flex-direction: column; gap: 2rem; margin-top: 2rem;">
+
+                <!-- Recent Requests -->
+                <div class="glass-panel animate-slide-up" style="animation-delay: 0.1s;">
+                    <div class="table-header">
+                        <div class="table-title">Recent Requests</div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="my-requests-table">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Current Tariff Rates -->
+                <div class="glass-panel animate-slide-up" style="animation-delay: 0.2s;">
+                    <div class="table-header">
+                        <div class="table-title">Current Tariff Rates</div>
+                    </div>
+                    <div class="table-container">
+                        <table style="font-size: 0.9rem;">
+                            <thead>
+                                <tr>
+                                    <th>Utility</th>
+                                    <th>Rate/Unit</th>
+                                    <th>Fixed Charge</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rates-table">
+                                <!-- JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script src="../../assets/js/layout.js"></script>
+    <script>
+        // Init Layout
+        Layout.renderSidebar('dashboard');
+        // Note: Dashboard had a "My Utilities" title in content, checking if same style.
+        // The dashboard.html had "My Utilities" as h1 page-title.
+        Layout.renderHeader('My Dashboard', 'Overview of your consumption');
+
+        // Init
+        const customerId = Session.requireCustomer();
+        console.log("Dashboard: Current Customer ID:", customerId);
+
+        async function initPage() {
+            try {
+                console.log("Dashboard: Starting Fetch...");
+
+                // Fetch User Details & Dashboard Data
+                const [user, meters, bills, allRequests, charges] = await Promise.all([
+                    API.getCustomerDetails(customerId),
+                    API.getMeters(customerId),
+                    API.getBills(customerId),
+                    API.getRequests(),
+                    API.getCharges()
+                ]);
+
+                console.log("Dashboard Data Fetched:", { user, meters, bills, allRequests, charges });
+
+                // Update Sidebar Name
+                // API.getCustomerDetails returns { customer: {...}, accounts: [...], meters: [...] }
+                // So 'user' variable above holds this entire object.
+                const customerProfile = user.customer;
+
+                console.log("Dashboard: Customer Profile:", customerProfile);
+
+                if (customerProfile) {
+                    // Update Sidebar Name
+                    const nameEl = document.getElementById('user-name-sidebar');
+                    if (nameEl) nameEl.textContent = customerProfile.FirstName + ' ' + customerProfile.LastName;
+
+                    // Update Welcome Message if exists
+                    const welcomeEl = document.getElementById('user-welcome-name');
+                    if (welcomeEl) welcomeEl.textContent = customerProfile.FirstName;
+                } else {
+                    console.error("Dashboard: Customer profile missing in response");
+                }
+
+
+                const myRequests = allRequests.filter(r => r.CustomerID === customerId);
+
+                renderStats(meters, bills);
+                renderRequests(myRequests);
+                renderRates(charges);
+
+                // Expose for actions
+                window.pageData = { meters, myRequests, bills };
+
+            } catch (e) {
+                console.error("Dashboard Load Error", e);
+            }
+        }
+
+        function renderStats(meters, bills) {
+            document.getElementById('my-meters-count').textContent = meters ? meters.length : 0;
+
+            const unpaid = bills ? bills.filter(b => b.PaymentStatus === 'Unpaid').reduce((acc, b) => acc + b.TotalAmount, 0) : 0;
+            document.getElementById('my-unpaid-bills').textContent = 'PKR ' + unpaid.toFixed(2);
+
+            if (bills && bills.length > 0) {
+                const lastBill = bills.sort((a, b) => new Date(b.IssueDate) - new Date(a.IssueDate))[0];
+                document.getElementById('last-bill-amount').textContent = 'PKR ' + lastBill.TotalAmount.toFixed(2);
+            } else {
+                document.getElementById('last-bill-amount').textContent = '-';
+            }
+        }
+
+        function renderRequests(reqs) {
+            const rTable = document.getElementById('my-requests-table');
+            if (reqs && reqs.length > 0) {
+                rTable.innerHTML = reqs.slice(0, 5).map(r => `
+                    <tr>
+                        <td>${r.UtilityType}</td>
+                        <td>${new Date(r.RequestDate).toLocaleDateString()}</td>
+                        <td><span class="status-badge ${r.Status === 'Approved' ? 'status-approved' : 'status-pending'}">${r.Status}</span></td>
+                    </tr>
+                `).join('');
+            } else {
+                rTable.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 1rem; color: #aaa;">No requests history</td></tr>';
+            }
+        }
+
+        function renderRates(charges) {
+            const el = document.getElementById('rates-table');
+            if (charges) {
+                el.innerHTML = charges.map(c => `
+                     <tr>
+                        <td style="font-weight: 500;">${c.UtilityType}</td>
+                        <td>PKR ${c.RatePerUnit}</td>
+                        <td>PKR ${c.FixedCharge}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function submitRequest() {
+            const type = document.getElementById('request-type').value;
+            const msgEl = document.getElementById('request-msg');
+            msgEl.textContent = '';
+
+            const { meters, myRequests } = window.pageData;
+
+            // Check if already has meter of this type
+            const hasMeter = meters.some(m => m.MeterType === type);
+            if (hasMeter) {
+                msgEl.textContent = `Error: You already have a ${type} meter. Duplicates not allowed.`;
+                msgEl.style.color = 'var(--danger-color)';
+                return;
+            }
+
+            // Check if pending request exists
+            const hasPending = myRequests.some(r => r.UtilityType === type && r.Status.includes('Pending'));
+            if (hasPending) {
+                msgEl.textContent = `Error: You already have a pending request for ${type}.`;
+                msgEl.style.color = 'var(--danger-color)';
+                return;
+            }
+
+            // Submit
+            const reqId = 'REQ-' + Math.floor(Math.random() * 100000);
+
+            const reqData = {
+                RequestID: reqId,
+                CustomerID: user.CustomerID,
+                UtilityType: type,
+                Status: 'Pending'
+            };
+
+            const res = await API.createRequest(reqData);
+
+            if (res.success) {
+                alert(`Request Submitted for ${type}!`);
+                initPage(); // Refresh
+            } else {
+                alert('Request Failed: ' + (res.error || 'Connection Error'));
+            }
+        }
+
+        initPage();
+    </script>
+</body>
+
+</html>
