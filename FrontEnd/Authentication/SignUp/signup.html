@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - PowerPay</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Styles -->
+    <!-- Styles -->
+    <link rel="stylesheet" href="../../assets/css/global.css">
+    <link rel="stylesheet" href="signup.css">
+</head>
+
+<body>
+    <div class="auth-card animate-slide-up">
+        <a href="../../home/home.html" class="back-arrow-btn" title="Back to Home">
+            <i class="fa-solid fa-arrow-left"></i>
+        </a>
+        <div class="auth-header">
+            <div class="auth-brand">Create Account</div>
+            <div class="auth-subtitle">Join PowerPay to manage your utilities</div>
+        </div>
+
+        <form id="signup-form" onsubmit="handleSignup(event)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input type="text" id="fname" required class="form-input" placeholder="e.g. John">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" id="lname" required class="form-input" placeholder="e.g. Doe">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input type="number" id="phone" required class="form-input" placeholder="0300 1234567">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="email" required class="form-input" placeholder="you@example.com">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Service Address</label>
+                <input type="text" id="address" required class="form-input" placeholder="House #, Street, Area">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label class="form-label">City</label>
+                    <input type="text" id="city" required class="form-input" placeholder="Lahore">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Zip Code</label>
+                    <input type="number" id="zip" required class="form-input" placeholder="54000">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary w-100" style="margin-top: 1rem;">Create Account</button>
+
+            <div style="text-align: center; margin-top: 1.5rem; font-size: 0.95rem; font-weight: 500; color: #cbd5e1;">
+                Already have an account? <a href="../login/login.html" class="btn-link"
+                    style="color: var(--primary-color); font-weight: 700;">Login</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/session.js"></script>
+    <script>
+        async function handleSignup(e) {
+            e.preventDefault();
+
+            const userData = {
+                FirstName: document.getElementById('fname').value,
+                LastName: document.getElementById('lname').value,
+                PhoneNumber: document.getElementById('phone').value,
+                Email: document.getElementById('email').value,
+                ServiceAddress: document.getElementById('address').value,
+                City: document.getElementById('city').value,
+                ZipCode: document.getElementById('zip').value
+            };
+
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = "Creating Account...";
+
+            const res = await API.signup(userData);
+
+            if (res.success) {
+                alert(`🎉 Account Created Successfully!\nYour Customer ID: ${res.customerId}`);
+                Session.loginCustomer(res.customerId);
+            } else {
+                alert(`Error: ${res.error || 'Signup Failed'}`);
+                btn.disabled = false;
+                btn.textContent = "Create Account";
+            }
+        }
+    </script>
+</body>
+
+</html>
