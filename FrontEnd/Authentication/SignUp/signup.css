@@ -1,0 +1,17 @@
+body {
+    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.6), rgba(15, 23, 42, 0.8)), url('../../assets/images/hero-bg.png?v=2');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 2rem;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* Custom override for signup width */
+.auth-card {
+    max-width: 500px;
+}
